@@ -6,86 +6,86 @@
 // For more information, the home page:
 // http://pieroxy.net/blog/pages/lz-string/testing.html
 //
-// LZ-based compression algorithm, version 1.3.4
+// LZ-based compression algorithm, version 1.3.6
 var LZString = {
-
-
+  
+  
   // private property
   _keyStr : "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
   _f : String.fromCharCode,
-
+  
   compressToBase64 : function (input) {
     if (input == null) return "";
     var output = "";
     var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
     var i = 0;
-
+    
     input = LZString.compress(input);
-
+    
     while (i < input.length*2) {
-
+      
       if (i%2==0) {
         chr1 = input.charCodeAt(i/2) >> 8;
         chr2 = input.charCodeAt(i/2) & 255;
-        if (i/2+1 < input.length)
+        if (i/2+1 < input.length) 
           chr3 = input.charCodeAt(i/2+1) >> 8;
-        else
+        else 
           chr3 = NaN;
       } else {
         chr1 = input.charCodeAt((i-1)/2) & 255;
         if ((i+1)/2 < input.length) {
           chr2 = input.charCodeAt((i+1)/2) >> 8;
           chr3 = input.charCodeAt((i+1)/2) & 255;
-        } else
+        } else 
           chr2=chr3=NaN;
       }
       i+=3;
-
+      
       enc1 = chr1 >> 2;
       enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
       enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
       enc4 = chr3 & 63;
-
+      
       if (isNaN(chr2)) {
         enc3 = enc4 = 64;
       } else if (isNaN(chr3)) {
         enc4 = 64;
       }
-
+      
       output = output +
         LZString._keyStr.charAt(enc1) + LZString._keyStr.charAt(enc2) +
           LZString._keyStr.charAt(enc3) + LZString._keyStr.charAt(enc4);
-
+      
     }
-
+    
     return output;
   },
-
+  
   decompressFromBase64 : function (input) {
     if (input == null) return "";
     var output = "",
-        ol = 0,
+        ol = 0, 
         output_,
         chr1, chr2, chr3,
         enc1, enc2, enc3, enc4,
         i = 0, f=LZString._f;
-
+    
     input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
-
+    
     while (i < input.length) {
-
+      
       enc1 = LZString._keyStr.indexOf(input.charAt(i++));
       enc2 = LZString._keyStr.indexOf(input.charAt(i++));
       enc3 = LZString._keyStr.indexOf(input.charAt(i++));
       enc4 = LZString._keyStr.indexOf(input.charAt(i++));
-
+      
       chr1 = (enc1 << 2) | (enc2 >> 4);
       chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
       chr3 = ((enc3 & 3) << 6) | enc4;
-
+      
       if (ol%2==0) {
         output_ = chr1 << 8;
-
+        
         if (enc3 != 64) {
           output += f(output_ | chr2);
         }
@@ -94,7 +94,7 @@ var LZString = {
         }
       } else {
         output = output + f(output_ | chr1);
-
+        
         if (enc3 != 64) {
           output_ = chr2 << 8;
         }
@@ -104,9 +104,9 @@ var LZString = {
       }
       ol+=3;
     }
-
+    
     return LZString.decompress(output);
-
+    
   },
 
   compressToUTF16 : function (input) {
@@ -116,9 +116,9 @@ var LZString = {
         current,
         status = 0,
         f = LZString._f;
-
+    
     input = LZString.compress(input);
-
+    
     for (i=0 ; i<input.length ; i++) {
       c = input.charCodeAt(i);
       switch (status++) {
@@ -184,10 +184,10 @@ var LZString = {
           break;
       }
     }
-
+    
     return output + f(current + 32);
   },
-
+  
 
   decompressFromUTF16 : function (input) {
     if (input == null) return "";
@@ -196,10 +196,10 @@ var LZString = {
         status=0,
         i = 0,
         f = LZString._f;
-
+    
     while (i < input.length) {
       c = input.charCodeAt(i) - 32;
-
+      
       switch (status++) {
         case 0:
           current = c << 1;
@@ -265,14 +265,14 @@ var LZString = {
           status=0;
           break;
       }
-
-
+      
+      
       i++;
     }
-
+    
     return LZString.decompress(output);
     //return output;
-
+    
   },
 
 
@@ -310,6 +310,17 @@ var LZString = {
 
   },
 
+  //compress into a string that is already URI encoded
+  compressToEncodedURIComponent: function (uncompressed) {
+    return LZString.compressToBase64(uncompressed).replace(/=/g,"$").replace(/\//g,"-");
+  },
+
+  //decompress from an output of compressToEncodedURIComponent
+  decompressFromEncodedURIComponent:function (compressed) {
+    if (compressed) compressed = compressed.replace(/$/g,"=").replace(/-/g,"/");
+    return LZString.decompressFromBase64(compressed);
+  },
+
 
   compress: function (uncompressed) {
     if (uncompressed == null) return "";
@@ -322,19 +333,19 @@ var LZString = {
         context_enlargeIn= 2, // Compensate for the first entry which should not count
         context_dictSize= 3,
         context_numBits= 2,
-        context_data_string="",
-        context_data_val=0,
+        context_data_string="", 
+        context_data_val=0, 
         context_data_position=0,
         ii,
         f=LZString._f;
-
+    
     for (ii = 0; ii < uncompressed.length; ii += 1) {
       context_c = uncompressed.charAt(ii);
       if (!Object.prototype.hasOwnProperty.call(context_dictionary,context_c)) {
         context_dictionary[context_c] = context_dictSize++;
         context_dictionaryToCreate[context_c] = true;
       }
-
+      
       context_wc = context_w + context_c;
       if (Object.prototype.hasOwnProperty.call(context_dictionary,context_wc)) {
         context_w = context_wc;
@@ -408,8 +419,8 @@ var LZString = {
             }
             value = value >> 1;
           }
-
-
+          
+          
         }
         context_enlargeIn--;
         if (context_enlargeIn == 0) {
@@ -421,7 +432,7 @@ var LZString = {
         context_w = String(context_c);
       }
     }
-
+    
     // Output the code for w.
     if (context_w !== "") {
       if (Object.prototype.hasOwnProperty.call(context_dictionaryToCreate,context_w)) {
@@ -493,8 +504,8 @@ var LZString = {
           }
           value = value >> 1;
         }
-
-
+        
+        
       }
       context_enlargeIn--;
       if (context_enlargeIn == 0) {
@@ -502,7 +513,7 @@ var LZString = {
         context_numBits++;
       }
     }
-
+    
     // Mark the end of the stream
     value = 2;
     for (i=0 ; i<context_numBits ; i++) {
@@ -516,7 +527,7 @@ var LZString = {
       }
       value = value >> 1;
     }
-
+    
     // Flush the last char
     while (true) {
       context_data_val = (context_data_val << 1);
@@ -528,7 +539,7 @@ var LZString = {
     }
     return context_data_string;
   },
-
+  
   decompress: function (compressed) {
     if (compressed == null) return "";
     if (compressed == "") return null;
@@ -545,11 +556,11 @@ var LZString = {
         c,
         f = LZString._f,
         data = {string:compressed, val:compressed.charCodeAt(0), position:32768, index:1};
-
+    
     for (i = 0; i < 3; i += 1) {
       dictionary[i] = i;
     }
-
+    
     bits = 0;
     maxpower = Math.pow(2,2);
     power=1;
@@ -563,9 +574,9 @@ var LZString = {
       bits |= (resb>0 ? 1 : 0) * power;
       power <<= 1;
     }
-
+    
     switch (next = bits) {
-      case 0:
+      case 0: 
           bits = 0;
           maxpower = Math.pow(2,8);
           power=1;
@@ -581,7 +592,7 @@ var LZString = {
           }
         c = f(bits);
         break;
-      case 1:
+      case 1: 
           bits = 0;
           maxpower = Math.pow(2,16);
           power=1;
@@ -597,7 +608,7 @@ var LZString = {
           }
         c = f(bits);
         break;
-      case 2:
+      case 2: 
         return "";
     }
     dictionary[3] = c;
@@ -606,7 +617,7 @@ var LZString = {
       if (data.index > data.string.length) {
         return "";
       }
-
+      
       bits = 0;
       maxpower = Math.pow(2,numBits);
       power=1;
@@ -622,7 +633,7 @@ var LZString = {
       }
 
       switch (c = bits) {
-        case 0:
+        case 0: 
           bits = 0;
           maxpower = Math.pow(2,8);
           power=1;
@@ -641,7 +652,7 @@ var LZString = {
           c = dictSize-1;
           enlargeIn--;
           break;
-        case 1:
+        case 1: 
           bits = 0;
           maxpower = Math.pow(2,16);
           power=1;
@@ -659,15 +670,15 @@ var LZString = {
           c = dictSize-1;
           enlargeIn--;
           break;
-        case 2:
+        case 2: 
           return result;
       }
-
+      
       if (enlargeIn == 0) {
         enlargeIn = Math.pow(2, numBits);
         numBits++;
       }
-
+      
       if (dictionary[c]) {
         entry = dictionary[c];
       } else {
@@ -678,18 +689,18 @@ var LZString = {
         }
       }
       result += entry;
-
+      
       // Add w+entry[0] to the dictionary.
       dictionary[dictSize++] = w + entry.charAt(0);
       enlargeIn--;
-
+      
       w = entry;
-
+      
       if (enlargeIn == 0) {
         enlargeIn = Math.pow(2, numBits);
         numBits++;
       }
-
+      
     }
   }
 };
